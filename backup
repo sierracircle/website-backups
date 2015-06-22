@@ -1,0 +1,130 @@
+#!/bin/bash
+
+#a simple bash script to backup your website files and databases
+#this script assumes you have your backup folder at ~/.backups
+#ver. 4 
+
+#############################################
+#Edit Options Below  ##############################
+#############################################
+
+#your database info####
+   DBHOST='localhost'
+   DBUSER='YOURMYSQLUSER'
+   DBPW='YOURMYSQLUSERPASSWORD'
+#your databases
+#for individual databases you can list them here.   commented out for now
+   #DBNAME=(  'single_database' )
+#or, if you want to get all databases on server that the user has access to, use this:
+   DBNAME=( `echo "show databases" |  mysql --user=$DBUSER --password=$DBPW --host=$DBHOST  | tail -n+3 `)
+#your folders to backup ...assumes you are running from your user folder
+    FOLDERS=(  'www' '.scripts' '.ssh' )
+
+#############################################
+#End Options. stop editing##########################
+#############################################
+
+#get the name of the script
+SCRIPTNAME=$1
+
+#get the current month
+MONTH=$(date +%b)
+
+  if  [ "$SCRIPTNAME" != "yearly" ] ;  
+  then
+
+      #if running in -v mode(verbose),  give some output
+       if [ "$MODE" = "-v" ]; then
+       echo "check if local .backups directory exists. if not create it";
+       fi
+
+       #check if local .backups directory exists. if not create it
+       if [ ! -d "~/.backups/$SCRIPTNAME/db" ]; then
+       mkdir -p ~/.backups/$SCRIPTNAME/db ;
+       fi
+
+       #if running in -v mode(verbose),  give some output
+       if [ "$MODE" = "-v" ]; then
+       echo "remove db files older than 1 day";
+       fi
+       
+       find ~/.backups/$SCRIPTNAME/db/*.sql -type f -daystart -mtime +0 -exec rm {} \;  
+
+       #if running in -v mode(verbose),  give some output
+       if [ "$MODE" = "-v" ]; then
+       echo "get recent version of databases";
+       fi
+
+       #get recent version of databases from array
+       for i in "${DBNAME[@]}"
+       do
+       mysqldump --opt --user=$DBUSER --password=$DBPW --host=$DBHOST $i --lock-tables=false   > ~/.backups/$SCRIPTNAME/db/$i.`date +\%Y-\%m-\%d_\%H-\%M-\%S`.sql
+       done
+
+       #if running in -v mode(verbose),  give some output
+       if [ "$MODE" = "-v" ]; then
+       echo "back up your folders to local .backups folder";
+       fi
+       
+       for i in "${FOLDERS[@]}"
+       do
+	rsync -a -t -q $MODE  --delete --inplace --size-only   --links  ~/$i  ~/.backups/$SCRIPTNAME/   
+       done
+
+       #if running in -v mode(verbose),  give some output
+       if [ "$MODE" = "-v" ]; then
+       echo "all done!"
+       fi
+
+
+
+
+
+   else
+
+      #if running in -v mode(verbose),  give some output
+       if [ "$MODE" = "-v" ]; then
+       echo "running as yearly";
+       echo "check if local .backups directory exists. if not create it" ;
+       fi
+
+    #check if local .backups directory exists. if not create it
+       if [ ! -d "~/.backups/$SCRIPTNAME/$MONTH/db" ]; then
+       mkdir -p ~/.backups/$SCRIPTNAME/$MONTH/db ;
+       fi
+
+
+ #if running in -v mode(verbose),  give some output
+       if [ "$MODE" = "-v" ]; then
+       echo "remove db files older than 1 day" ;
+       fi
+       find ~/.backups/$SCRIPTNAME/$MONTH/db/*.sql -type f -daystart -mtime +1 -exec rm {} \;  
+       #if running in -v mode(verbose),  give some output
+       if [ "$MODE" = "-v" ]; then
+       echo "get recent version of databases" ;
+       fi
+
+       #get recent version of databases from array
+       for i in "${DBNAME[@]}"
+       do
+       mysqldump --opt --user=$DBUSER --password=$DBPW --host=$DBHOST $i --lock-tables=false   > ~/.backups/$SCRIPTNAME/$MONTH/db/$i.`date +\%Y-\%m-\%d_\%H-\%M-\%S`.sql 
+       done
+
+
+       #if running in -v mode(verbose),  give some output
+       if [ "$MODE" = "-v" ]; then
+       echo "back up your folders to local .backups folder" ;
+       fi
+
+      for i in "${FOLDERS[@]}"
+       do
+	rsync -a -t -q $MODE --delete --inplace --size-only   --links  ~/$i  ~/.backups/$SCRIPTNAME/$MONTH/   
+       done
+
+   
+       #if running in -v mode(verbose),  give some output
+       if [ "$MODE" = "-v" ]; then
+       echo "all done!" ;
+       fi
+
+ fi
