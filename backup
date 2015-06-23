@@ -1,8 +1,15 @@
 #!/bin/bash
 
+#ver. 4 
 #a simple bash script to backup your website files and databases
 #this script assumes you have your backup folder at ~/.backups
-#ver. 4 
+#run as a cronjob like so:
+# @hourly ~/.scripts/backups hourly
+# @monthly ~/.scripts/backup monthly
+# @yearly ~/.scripts/backup yearly
+
+
+
 
 #############################################
 #Edit Options Below  ##############################
